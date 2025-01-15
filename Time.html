@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Time Now & Stopwatch</title>
+    <style>
+        :root {
+            --dark-background: #1a1a1a;
+            --dark-text: #ffffff;
+            --dark-secondary-text: #bbbbbb;
+
+            --light-background: #ffffff;
+            --light-text: #000000;
+            --light-secondary-text: #555555;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--dark-background);
+            color: var(--dark-text);
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        h1 {
+            font-size: 80px;
+            margin: 0;
+        }
+
+        p {
+            font-size: 30px;
+            margin: 10px 0;
+        }
+
+        .location {
+            font-size: 18px;
+            margin: 20px 0;
+        }
+
+        select, button {
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: var(--dark-text);
+            color: var(--dark-background);
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        select:hover, button:hover {
+            background-color: var(--dark-secondary-text);
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            font-size: 14px;
+            color: var(--dark-secondary-text);
+        }
+
+        /* Settings panel styles */
+        .settings-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background-color: var(--dark-background);
+            color: var(--dark-text);
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+            z-index: 200;
+        }
+
+        .settings-panel button {
+            margin-bottom: 10px;
+        }
+
+        .settings-icon {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            font-size: 30px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--dark-text);
+            z-index: 100;
+        }
+
+        .stopwatch-container {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            z-index: 100;
+            background-color: var(--dark-background);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+            color: var(--dark-text);
+        }
+
+        .stopwatch-container button {
+            margin-bottom: 10px;
+        }
+
+        .stopwatch {
+            display: none;
+        }
+
+        .active-stopwatch {
+            display: block;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="current-time">00:00</h1>
+    <p id="date"></p>
+    <div class="location" id="location">Walthamstow, UK</div>
+    
+    <!-- Time zone selection -->
+    <select id="timezone" onchange="updateTime()">
+        <!-- Time zones will be populated dynamically -->
+    </select>
+</div>
+
+<!-- Settings Panel -->
+<div id="settings-panel" class="settings-panel">
+    <button onclick="toggleTimeFormat()">Toggle AM/PM</button>
+    <button onclick="toggleStopwatchMode()">Toggle Stopwatch</button>
+    <select id="timezone" onchange="updateTime()"> <!-- Replaced time zone selection inside panel -->
+        <!-- Time zones will be populated dynamically -->
+    </select>
+    <button onclick="toggleTheme()">Toggle Dark/Light Mode</button>
+    <!-- Close button -->
+    <button onclick="closeSettingsPanel()">Close Settings</button>
+</div>
+
+<!-- Settings Icon to show panel -->
+<button class="settings-icon" onclick="toggleSettingsPanel()">⚙️</button>
+
+<!-- Stopwatch and toggle buttons in the bottom-left corner -->
+<div class="stopwatch-container">
+    <!-- Stopwatch section -->
+    <div id="stopwatch" class="stopwatch">
+        <h2 id="stopwatch-time">00:00</h2>
+        <button onclick="toggleStopwatch()">Start/Stop Stopwatch</button>
+        <button onclick="resetStopwatch()">Reset Stopwatch</button>
+    </div>
+</div>
+
+<div class="footer">
+    <p>accutime.info © 2025</p>
+</div>
+
+<script>
+    let isStopwatchRunning = false;
+    let elapsedTime = 0;
+    let stopwatchInterval;
+    let timeInterval;
+    let is24Hour = true; // Flag for 24-hour format
+    let isDarkMode = true; // Flag for dark mode
+    let isStopwatchMode = false; // Flag for showing stopwatch mode
+
+    const timeZonesWithFlags = [
+        { zone: "Pacific/Midway", flag: "🇼🇸" },
+        { zone: "Pacific/Honolulu", flag: "🇺🇸" },
+        { zone: "America/Anchorage", flag: "🇺🇸" },
+        { zone: "America/Los_Angeles", flag: "🇺🇸" },
+        { zone: "America/Denver", flag: "🇺🇸" },
+        { zone: "America/Chicago", flag: "🇺🇸" },
+        { zone: "America/New_York", flag: "🇺🇸" },
+        { zone: "Europe/London", flag: "🇬🇧" },
+        { zone: "Europe/Paris", flag: "🇫🇷" },
+        { zone: "Asia/Dubai", flag: "🇦🇪" },
+        { zone: "Asia/Kolkata", flag: "🇮🇳" },
+        { zone: "Asia/Tokyo", flag: "🇯🇵" },
+        { zone: "Australia/Sydney", flag: "🇦🇺" },
+        { zone: "UTC", flag: "🌍" }
+    ];
+
+    function populateTimeZones() {
+        const timezoneDropdown = document.getElementById("timezone");
+        timeZonesWithFlags.forEach(({ zone, flag }) => {
+            const option = document.createElement("option");
+            option.value = zone;
+            option.textContent = `${flag} ${zone.replace("_", " ")}`;
+            timezoneDropdown.appendChild(option);
+        });
+        timezoneDropdown.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+    }
+
+    function updateTime() {
+        if (isStopwatchMode) return; // Do not update the time when in stopwatch mode
+
+        const now = new Date();
+        const selectedTimeZone = document.getElementById("timezone").value;
+
+        const options = {
+            timeZone: selectedTimeZone,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: !is24Hour
+        };
+
+        const timeFormatter = new Intl.DateTimeFormat('en-US', options);
+        const formattedTime = timeFormatter.format(now);
+
+        document.getElementById("current-time").textContent = formattedTime;
+
+        const dateOptions = { timeZone: selectedTimeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const dateFormatter = new Intl.DateTimeFormat('en-US', dateOptions);
+        const formattedDate = dateFormatter.format(now);
+        document.getElementById("date").textContent = formattedDate;
+
+        document.getElementById("location").textContent = selectedTimeZone.replace("_", " ");
+    }
+
+    function toggleStopwatch() {
+        if (isStopwatchRunning) {
+            clearInterval(stopwatchInterval);
+        } else {
+            stopwatchInterval = setInterval(() => {
+                elapsedTime++;
+                document.getElementById("stopwatch-time").textContent = formatTime(elapsedTime);
+            }, 1000);
+        }
+        isStopwatchRunning = !isStopwatchRunning;
+    }
+
+    function resetStopwatch() {
+        clearInterval(stopwatchInterval);
+        elapsedTime = 0;
+        document.getElementById("stopwatch-time").textContent = formatTime(elapsedTime);
+        isStopwatchRunning = false;
+    }
+
+    function toggleStopwatchMode() {
+        isStopwatchMode = !isStopwatchMode;
+        document.getElementById("stopwatch").classList.toggle("active-stopwatch", isStopwatchMode);
+        document.getElementById("current-time").style.display = isStopwatchMode ? 'none' : 'block';
+        updateTime(); // Update the time once when switching back from stopwatch mode
+    }
+
+    function toggleTimeFormat() {
+        is24Hour = !is24Hour;
+        updateTime();
+    }
+
+    function toggleSettingsPanel() {
+        const settingsPanel = document.getElementById("settings-panel");
+        settingsPanel.style.display = settingsPanel.style.display === "none" ? "block" : "none";
+    }
+
+    function closeSettingsPanel() {
+        document.getElementById("settings-panel").style.display = "none";
+    }
+
+    function toggleTheme() {
+        isDarkMode = !isDarkMode;
+        document.body.style.backgroundColor = isDarkMode ? 'var(--dark-background)' : 'var(--light-background)';
+        document.body.style.color = isDarkMode ? 'var(--dark-text)' : 'var(--light-text)';
+        document.querySelector('.settings-panel').style.backgroundColor = isDarkMode ? 'var(--dark-background)' : 'var(--light-background)';
+    }
+
+    window.onload = () => {
+        populateTimeZones();
+        updateTime();
+    };
+
+    setInterval(updateTime, 1000); // Start updating the time immediately
+</script>
+
+</body>
+</html>
