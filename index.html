@@ -123,6 +123,11 @@
             display: block;
         }
 
+        .adsense-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+
     </style>
 </head>
 <body>
@@ -136,6 +141,20 @@
     <select id="timezone" onchange="updateTime()">
         <!-- Time zones will be populated dynamically -->
     </select>
+
+    <!-- AdSense Ad (Place anywhere in the container) -->
+    <div class="adsense-container">
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9270481686930497" crossorigin="anonymous"></script>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-9270481686930497"
+             data-ad-slot="YOUR_AD_SLOT_ID"
+             data-ad-format="auto"></ins>
+        <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+
 </div>
 
 <!-- Settings Panel -->
@@ -164,7 +183,7 @@
 </div>
 
 <div class="footer">
-    <p>The Best and Accurate Time</p>
+    <p>The Best and Functional Time.</p>
 </div>
 
 <script>
@@ -231,22 +250,47 @@
 
         const dateOptions = { timeZone: selectedTimeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         const dateFormatter = new Intl.DateTimeFormat('en-US', dateOptions);
-        const formattedDate = dateFormatter.format(now);
-        document.getElementById("date").textContent = formattedDate;
-
+        document.getElementById("date").textContent = dateFormatter.format(now);
         document.getElementById("location").textContent = selectedTimeZone.replace("_", " ");
+    }
+
+    function toggleStopwatchMode() {
+        isStopwatchMode = !isStopwatchMode;
+        updateTime(); // Update time when toggling
+    }
+
+    function toggleTimeFormat() {
+        is24Hour = !is24Hour;
+        updateTime();
+    }
+
+    function toggleTheme() {
+        isDarkMode = !isDarkMode;
+        document.body.style.backgroundColor = isDarkMode ? "var(--dark-background)" : "var(--light-background)";
+        document.body.style.color = isDarkMode ? "var(--dark-text)" : "var(--light-text)";
+    }
+
+    function toggleSettingsPanel() {
+        const panel = document.getElementById("settings-panel");
+        panel.style.display = panel.style.display === "block" ? "none" : "block";
+    }
+
+    function closeSettingsPanel() {
+        const panel = document.getElementById("settings-panel");
+        panel.style.display = "none";
     }
 
     function toggleStopwatch() {
         if (isStopwatchRunning) {
             clearInterval(stopwatchInterval);
+            isStopwatchRunning = false;
         } else {
             stopwatchInterval = setInterval(() => {
                 elapsedTime++;
                 document.getElementById("stopwatch-time").textContent = formatTime(elapsedTime);
             }, 1000);
+            isStopwatchRunning = true;
         }
-        isStopwatchRunning = !isStopwatchRunning;
     }
 
     function resetStopwatch() {
@@ -256,40 +300,10 @@
         isStopwatchRunning = false;
     }
 
-    function toggleStopwatchMode() {
-        isStopwatchMode = !isStopwatchMode;
-        document.getElementById("stopwatch").classList.toggle("active-stopwatch", isStopwatchMode);
-        document.getElementById("current-time").style.display = isStopwatchMode ? 'none' : 'block';
-        updateTime(); // Update the time once when switching back from stopwatch mode
-    }
+    // Initialize time zone and update time every second
+    populateTimeZones();
+    setInterval(updateTime, 1000);
 
-    function toggleTimeFormat() {
-        is24Hour = !is24Hour;
-        updateTime();
-    }
-
-    function toggleSettingsPanel() {
-        const settingsPanel = document.getElementById("settings-panel");
-        settingsPanel.style.display = settingsPanel.style.display === "none" ? "block" : "none";
-    }
-
-    function closeSettingsPanel() {
-        document.getElementById("settings-panel").style.display = "none";
-    }
-
-    function toggleTheme() {
-        isDarkMode = !isDarkMode;
-        document.body.style.backgroundColor = isDarkMode ? 'var(--dark-background)' : 'var(--light-background)';
-        document.body.style.color = isDarkMode ? 'var(--dark-text)' : 'var(--light-text)';
-        document.querySelector('.settings-panel').style.backgroundColor = isDarkMode ? 'var(--dark-background)' : 'var(--light-background)';
-    }
-
-    window.onload = () => {
-        populateTimeZones();
-        updateTime();
-    };
-
-    setInterval(updateTime, 1000); // Start updating the time immediately
 </script>
 
 </body>
